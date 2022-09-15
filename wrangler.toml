@@ -1,0 +1,7 @@
+name = "r2-list-bug-repro"
+main = "src/index.ts"
+compatibility_date = "2022-09-15"
+
+r2_buckets = [
+	{binding = "R2", bucket_name = "junk"},
+]
