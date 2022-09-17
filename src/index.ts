@@ -1,18 +1,11 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `wrangler dev src/index.ts` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `wrangler publish src/index.ts --name my-worker` to publish your worker
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
-
-
-// 1. Call /populate and fill the bucket up with at least 1000 R2 objects with
-//    sizable metadata attached.
+// 1. Call "/populate" and fill the bucket up with at least 900 R2 objects with
+//    about 500 bytes of metadata attached to each.
 //
-// 2.
+// 2. Request "/" and observe "Error: internal error"
+//
+// It seems that if I omit the option to include customMetadata, it does not
+// fail. But if I include customMetadata I have to set a low `limit` in order
+// to avoid the "Error: internal error"
 
 export interface Env {
 	R2: R2Bucket;
@@ -22,11 +15,11 @@ export default {
 	async fetch(
 		request: Request,
 		env: Env,
-		ctx: ExecutionContext
+		_ctx: ExecutionContext
 	): Promise<Response> {
 		const { pathname } = new URL(request.url);
 		if (pathname === '/populate') {
-			return populate(request, env, ctx);
+			return populate(request, env);
 		}
 		let more = true;
 		let cursor: string|undefined;
@@ -37,7 +30,7 @@ export default {
 				include: ['customMetadata'],
 			});
 			console.log(listResult.objects.length + ' records returned');
-			listResult.objects.forEach(obj => results.push(obj.customMetadata));
+			listResult.objects.forEach(obj => results.push(obj.key));
 			more = listResult.truncated;
 			cursor = listResult.cursor;
 		}
@@ -49,10 +42,10 @@ export default {
 	},
 };
 
+// Populate an R2 bucket with some junk records.
 async function populate(
 	request: Request,
 	env: Env,
-	ctx: ExecutionContext,
 ): Promise<Response> {
 	const { searchParams } = new URL(request.url);
 	const count = parseInt(searchParams.get('count') || '900', 10);
@@ -65,9 +58,8 @@ async function populate(
 					"\"contentLength\":0,\"uploadLength\":2126219066,\"uploadMetadata\":{\"name\":\"com" +
 					".oksdosapdkaspodkxxxxxxpkcpoxkocpkx.apk\",\"internal_user_id\":\"123\",\"action\":" +
 					"\"release\"},\"uploadConcat\":null},\"currentOffset\":1308000000,\"parts\":null}"),
-				// "prevKey": "0000/000000000",
 			},
 		});
 	}
-	return new Response('CREATED RECORDS');
+	return new Response(`Created ${count} sample records.`);
 }
